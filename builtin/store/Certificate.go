@@ -12,8 +12,8 @@ type Certificate struct {
 	CreatedAt    time.Time `storm:"index"`
 }
 
-func (c *Certificate) Save() error {
-	err := db.Save(&c)
+func (c Certificate) Save() error {
+	err := db.Save(c)
 	return err
 }
 

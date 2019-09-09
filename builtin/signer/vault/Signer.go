@@ -197,7 +197,11 @@ func storeCert(keyID string, ttl string, signedKey string, serialNumber string) 
 		CreatedAt:    time.Now(),
 	}
 
-	return cert.Save()
+	err := cert.Save()
+
+	if err != nil {
+		return fmt.Errorf("storm eror: %s", err)
+	}
 
 }
 
