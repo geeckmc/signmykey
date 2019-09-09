@@ -14,9 +14,9 @@ import (
 
 type KeycloakResp struct {
 	RealmId      string `json:"realmId"`
-	ResourceType string `json:"realmId"`
-	OperationType string `json:"realmId"`
-	Representation map[string]*json.RawMessage
+	ResourceType string `json:"resourceType"`
+	OperationType string `json:"operationType"`
+	Representation map[string]*json.RawMessage `json:"representation"`
 }
 
 
@@ -50,12 +50,12 @@ func KeycloakEnventHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Debugf("event from server: %s", string(body))
 
-	dispatchAction(r.Context(),&keycloakResponse)
+	dispatchAction(r.Context(),keycloakResponse)
 
 	render.JSON(w, r, map[string]string{"ack": "recieved"})
 }
 
-func dispatchAction(context context.Context, p *KeycloakResp) {
+func dispatchAction(context context.Context, p KeycloakResp) {
 	switch p.ResourceType {
 	case "USER":
 		var userIsEnabled bool
@@ -63,6 +63,7 @@ func dispatchAction(context context.Context, p *KeycloakResp) {
 
 		_ = json.Unmarshal(*p.Representation["enabled"] ,&userIsEnabled)
 		_ = json.Unmarshal(*p.Representation["username"] ,&username)
+
 		if p.OperationType == "DELETE" || (p.OperationType == "UPDATE" &&  userIsEnabled == false) {
 
 			keyID := fmt.Sprintf("oidc-%s", username)
