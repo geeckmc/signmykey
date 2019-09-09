@@ -203,6 +203,8 @@ func storeCert(keyID string, ttl string, signedKey string, serialNumber string) 
 		return fmt.Errorf("storm eror: %s", err)
 	}
 
+	return nil
+
 }
 
 func extractSignedKeyAndSerialNumber(resp *http.Response) (string, string, error) {
