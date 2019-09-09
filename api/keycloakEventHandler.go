@@ -16,7 +16,7 @@ type KeycloakResp struct {
 	RealmId      string `json:"realmId"`
 	ResourceType string `json:"realmId"`
 	OperationType string `json:"realmId"`
-	Representation map[string]interface{}
+	Representation map[string]*json.RawMessage
 }
 
 
@@ -58,9 +58,14 @@ func KeycloakEnventHandler(w http.ResponseWriter, r *http.Request) {
 func dispatchAction(context context.Context, p *KeycloakResp) {
 	switch p.ResourceType {
 	case "USER":
-		if p.OperationType == "DELETE" || (p.OperationType == "UPDATE" && p.Representation["enabled"].(bool) == false) {
+		var userIsEnabled bool
+		var username string
 
-			keyID := fmt.Sprintf("oidc-%s", p.Representation["username"].(string))
+		_ = json.Unmarshal(*p.Representation["enabled"] ,&userIsEnabled)
+		_ = json.Unmarshal(*p.Representation["username"] ,&username)
+		if p.OperationType == "DELETE" || (p.OperationType == "UPDATE" &&  userIsEnabled == false) {
+
+			keyID := fmt.Sprintf("oidc-%s", username)
 			log.Debugf("request to revoke certificates with key id = %s", keyID)
 
 			err := config.Signer.RevokeCertificate(context,keyID)
