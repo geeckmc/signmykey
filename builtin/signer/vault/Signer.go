@@ -197,6 +197,8 @@ func storeCert(keyID string, ttl string, signedKey string, serialNumber string) 
 		CreatedAt:    time.Now(),
 	}
 
+	log.Debugf("certificate to persist : %s" , cert)
+
 	err := cert.Save()
 
 	if err != nil {
