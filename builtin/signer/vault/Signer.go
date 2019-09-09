@@ -177,10 +177,10 @@ func (v Signer) Sign(ctx context.Context, payload []byte, id string, principals 
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf(">> unknown error from Vault with status code %s", string(body))
+		return "", fmt.Errorf("unknown error from Vault with status code %s", resp.StatusCode)
 	}
 
-	signedKey, serialNumber, err := extractSignedKeyAndSerialNumber(resp)
+	signedKey, serialNumber, err := extractSignedKeyAndSerialNumber(body)
 
 	err = storeCert(certreq.ID, v.SignTTL, signedKey, serialNumber)
 
@@ -210,14 +210,10 @@ func storeCert(keyID string, ttl string, signedKey string, serialNumber string) 
 
 }
 
-func extractSignedKeyAndSerialNumber(resp *http.Response) (string, string, error) {
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", "", errors.Wrap(err, "error reading response body")
-	}
+func extractSignedKeyAndSerialNumber(body []byte) (string, string, error) {
 
 	var signResp map[string]interface{}
-	err = json.Unmarshal(body, &signResp)
+	err := json.Unmarshal(body, &signResp)
 	if err != nil {
 		return "", "", errors.Wrap(err, "error unmarshaling Vault response")
 	}
