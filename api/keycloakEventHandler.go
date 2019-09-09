@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/render"
@@ -24,6 +26,12 @@ func KeycloakEnventHandler(w http.ResponseWriter, r *http.Request) {
 
 	authKey := r.Header.Get("X-Auth-Key")
 
+	requestDump, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		log.Error(err)
+	}
+	log.Debug(string(requestDump))
+
 	if len(strings.TrimSpace(authKey)) == 0 || authKey != config.Addons.KeycloakHookAuthKey {
 		log.Errorf("invalid auth key from keycloack: %s", authKey)
 		render.Status(r, 401)
@@ -40,7 +48,10 @@ func KeycloakEnventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	keycloakResponse := KeycloakResp{}
-	err = json.Unmarshal(body, &keycloakResponse)
+
+	s, _ := strconv.Unquote(string(body))
+
+	err = json.Unmarshal([]byte(s), &keycloakResponse)
 
 	if err != nil {
 		log.Errorf("failed to parse keycloak payload: %s", err)
