@@ -48,7 +48,12 @@ func KeycloakEnventHandler(w http.ResponseWriter, r *http.Request) {
 
 	keycloakResponse := KeycloakResp{}
 
+	// strconv.Unquote not json unmarshal tips did'nt provided expected results
 	cleanBody := strings.Replace(string(body), "\\", "", -1)
+	cleanBody = strings.Replace(cleanBody, "\"{", "{", -1)
+	cleanBody = strings.Replace(cleanBody, "}\"", "}", -1)
+
+	fmt.Printf(">> %s", cleanBody)
 
 	err = json.Unmarshal( []byte(cleanBody), &keycloakResponse)
 

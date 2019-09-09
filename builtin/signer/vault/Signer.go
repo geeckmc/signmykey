@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/asdine/storm"
 	"github.com/signmykeyio/signmykey/builtin/store"
 	"io/ioutil"
 	"net/http"
@@ -295,6 +296,10 @@ func (v Signer) getToken() (string, error) {
 func (v Signer) RevokeCertificate(ctx context.Context, keyID string) error {
 	certs, err := store.Get(keyID)
 	if err != nil {
+		if err == storm.ErrNotFound {
+			log.Debug("not corresponding certificates")
+			return nil
+		}
 		return err
 	}
 
