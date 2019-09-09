@@ -200,7 +200,7 @@ func storeCert(keyID string, ttl string, signedKey string, serialNumber string) 
 	err := cert.Save()
 
 	if err != nil {
-		return fmt.Errorf("storm eror: %s", err)
+		return fmt.Errorf("storm error: %s", err)
 	}
 
 	return nil
