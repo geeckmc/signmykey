@@ -197,7 +197,8 @@ func storeCert(keyID string, ttl string, signedKey string, serialNumber string) 
 		CreatedAt:    time.Now(),
 	}
 
-	log.Debugf("certificate to persist : %s" , cert)
+	certJson, _ := json.MarshalIndent(cert, "", "\t")
+	log.Debugf("certificate to persist : %s" , certJson)
 
 	err := cert.Save()
 
