@@ -2,6 +2,7 @@ package store
 
 import (
 	"github.com/asdine/storm"
+	"github.com/spf13/viper"
 	"log"
 )
 
@@ -12,7 +13,8 @@ var (
 func init() {
 
 	var err error
-	db, err = storm.Open("signmykey.db")
+	viper.SetDefault("db", "/etc/signmykey/signmykey.db")
+	db, err = storm.Open(viper.GetString("db"))
 
 	if err != nil {
 		log.Fatalf("Failed to init database\n trace : %s", err)

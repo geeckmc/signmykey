@@ -71,7 +71,7 @@ func (v *Signer) Init(config *viper.Viper) error {
 		scheme = "http"
 	}
 	v.fullAddr = fmt.Sprintf("%s://%s:%d/v1", scheme, v.Address, v.Port)
-
+	initKRL()
 	return nil
 }
 
@@ -310,14 +310,42 @@ func (v Signer) RevokeCertificate(ctx context.Context, keyID string) error {
 
 		cmd := exec.Command("ssh-keygen", "-ukf", krl, "-s", rootCA, certFilename)
 
+		var out bytes.Buffer
+		var stderr bytes.Buffer
+		cmd.Stdout = &out
+		cmd.Stderr = &stderr
+
 		if err := cmd.Run(); err != nil {
-			log.Fatalf("failed to revoke certificate %s", err)
+			log.Fatalf("failed to revoke certificate %s: %s \n stdout: %s", err, stderr.String(), out.String())
 			return err
 		}
 		_ = deleteFile(certFilename)
 	}
 
 	return nil
+}
+
+func initKRL (){
+	// KRL file if not exist need to be init
+	log.Debug("init KRL file ...")
+	var krlFilename = viper.GetString("krl")
+	rootCA := viper.GetString("rootCA")
+
+	_, err := os.OpenFile(krlFilename, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		log.Debugf("failed to init krl file: ", krlFilename)
+	}
+	cmd := exec.Command("ssh-keygen", "-kf", krlFilename, "-s", rootCA)
+
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		log.Debugf("failed to init krl file %s: %s \n stdout: %s", err, stderr.String(), out.String())
+	}
+
 }
 
 func writeFile(filename string, content string) error {
