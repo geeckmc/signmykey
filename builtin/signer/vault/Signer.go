@@ -172,8 +172,9 @@ func (v Signer) Sign(ctx context.Context, payload []byte, id string, principals 
 	}
 	defer resp.Body.Close() // nolint: errcheck
 
+	body, err := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("unknown error from Vault with status code %d", resp.StatusCode)
+		return "", fmt.Errorf(">> unknown error from Vault with status code %s", string(body))
 	}
 
 	signedKey, err := extractSignedKey(resp)
@@ -256,3 +257,60 @@ func (v Signer) getToken() (string, error) {
 
 	return token, nil
 }
+
+
+func (v Signer) revokeCertificate(ctx context.Context, payload []byte, id string, principals []string) (cert string, err error) {
+
+	var signReq vaultSignReq
+	err = json.Unmarshal(payload, &signReq)
+	if err != nil {
+		log.Errorf("json unmarshaling failed: %s", err)
+		return "", fmt.Errorf("JSON unmarshaling failed: %s", err)
+	}
+
+	token, err := v.getToken()
+	if err != nil {
+		return "", errors.Wrap(err, "error getting auth token")
+	}
+
+	certreq := signer.CertReq{
+		Key:        signReq.PubKey,
+		ID:         id,
+		Principals: principals,
+	}
+	data, err := json.Marshal(map[string]string{
+		"key_id":           certreq.ID,
+		"public_key":       certreq.Key,
+		"valid_principals": strings.Join(certreq.Principals, ","),
+		"ttl":              v.SignTTL,
+	})
+	if err != nil {
+		return "", errors.Wrap(err, "marshaling of sign request payload failed")
+	}
+
+	client := http.Client{Timeout: time.Second * 10}
+	req, err := http.NewRequest(
+		"POST",
+		fmt.Sprintf("%s/%s/sign/%s", v.fullAddr, v.Path, v.Role),
+		bytes.NewBuffer(data),
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "error creating new httprequest")
+	}
+	req.Header.Add("X-Vault-Token", token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", errors.Wrap(err, "failed during Post request")
+	}
+	defer resp.Body.Close() // nolint: errcheck
+
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("unknown error from Vault with status code %d", resp.StatusCode)
+	}
+
+	signedKey, err := extractSignedKey(resp)
+
+	return signedKey, err
+}
+
