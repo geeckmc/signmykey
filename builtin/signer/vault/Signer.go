@@ -5,8 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/signmykeyio/signmykey/builtin/store"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -177,32 +180,53 @@ func (v Signer) Sign(ctx context.Context, payload []byte, id string, principals 
 		return "", fmt.Errorf(">> unknown error from Vault with status code %s", string(body))
 	}
 
-	signedKey, err := extractSignedKey(resp)
+	signedKey, serialNumber, err := extractSignedKeyAndSerialNumber(resp)
+
+	err = storeCert(certreq.ID, v.SignTTL, signedKey, serialNumber)
 
 	return signedKey, err
 }
 
-func extractSignedKey(resp *http.Response) (string, error) {
+func storeCert(keyID string, ttl string, signedKey string, serialNumber string) error {
+
+	cert := store.Certificate{
+		KeyID:        keyID,
+		TTL:          ttl,
+		SerialNumber: serialNumber,
+		SignedKey:    signedKey,
+		CreatedAt:    time.Now(),
+	}
+
+	return cert.Save()
+
+}
+
+func extractSignedKeyAndSerialNumber(resp *http.Response) (string, string, error) {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", errors.Wrap(err, "error reading response body")
+		return "", "", errors.Wrap(err, "error reading response body")
 	}
 
 	var signResp map[string]interface{}
 	err = json.Unmarshal(body, &signResp)
 	if err != nil {
-		return "", errors.Wrap(err, "error unmarshaling Vault response")
+		return "", "", errors.Wrap(err, "error unmarshaling Vault response")
 	}
 	val, ok := signResp["data"].(map[string]interface{})
 	if !ok {
-		return "", fmt.Errorf("Signed key not found in Vault response")
+		return "", "", fmt.Errorf("Signed key not found in Vault response")
 	}
 	signedKey, ok := val["signed_key"].(string)
 	if !ok {
-		return "", fmt.Errorf("Signed key not found in Vault response")
+		return "", "", fmt.Errorf("Signed key not found in Vault response")
 	}
 
-	return signedKey, nil
+	serialNumber, ok := val["serial_number"].(string)
+	if !ok {
+		return signedKey, "", fmt.Errorf("Serial number  not found in Vault response")
+	}
+
+	return signedKey, serialNumber, nil
 }
 
 func (v Signer) getToken() (string, error) {
@@ -258,59 +282,61 @@ func (v Signer) getToken() (string, error) {
 	return token, nil
 }
 
+// According to ssh documentation certificate can be revoked by adding it to KRL (Keys Revocation List)
+// KRL is particular binary file format contains keys data ( keyID, serial number, ... )
+// ssh-keygen tools offer an option to create (-k) and update (-u) this file
+// the only inputs needed by this tool are : root certificate and a issued certificate to revoke
 
-func (v Signer) revokeCertificate(ctx context.Context, payload []byte, id string, principals []string) (cert string, err error) {
-
-	var signReq vaultSignReq
-	err = json.Unmarshal(payload, &signReq)
+func (v Signer) RevokeCertificate(ctx context.Context, keyID string) error {
+	certs, err := store.Get(keyID)
 	if err != nil {
-		log.Errorf("json unmarshaling failed: %s", err)
-		return "", fmt.Errorf("JSON unmarshaling failed: %s", err)
+		return err
 	}
 
-	token, err := v.getToken()
-	if err != nil {
-		return "", errors.Wrap(err, "error getting auth token")
+	const certFilename = "/tmp/cert_to_revoke.pem"
+	rootCA := viper.GetString("rootCA")
+	krl := viper.GetString("krl")
+	
+	for _, cert := range certs {
+		err := writeFile(certFilename, cert.SignedKey)
+		if err != nil {
+			return err
+		}
+
+		cmd := exec.Command("ssh-keygen", "-ukf", krl, "-s", rootCA, certFilename)
+
+		if err := cmd.Run(); err != nil {
+			log.Fatalf("failed to revoke certificate %s", err)
+			return err
+		}
+		_ = deleteFile(certFilename)
 	}
 
-	certreq := signer.CertReq{
-		Key:        signReq.PubKey,
-		ID:         id,
-		Principals: principals,
-	}
-	data, err := json.Marshal(map[string]string{
-		"key_id":           certreq.ID,
-		"public_key":       certreq.Key,
-		"valid_principals": strings.Join(certreq.Principals, ","),
-		"ttl":              v.SignTTL,
-	})
-	if err != nil {
-		return "", errors.Wrap(err, "marshaling of sign request payload failed")
-	}
-
-	client := http.Client{Timeout: time.Second * 10}
-	req, err := http.NewRequest(
-		"POST",
-		fmt.Sprintf("%s/%s/sign/%s", v.fullAddr, v.Path, v.Role),
-		bytes.NewBuffer(data),
-	)
-	if err != nil {
-		return "", errors.Wrap(err, "error creating new httprequest")
-	}
-	req.Header.Add("X-Vault-Token", token)
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", errors.Wrap(err, "failed during Post request")
-	}
-	defer resp.Body.Close() // nolint: errcheck
-
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("unknown error from Vault with status code %d", resp.StatusCode)
-	}
-
-	signedKey, err := extractSignedKey(resp)
-
-	return signedKey, err
+	return nil
 }
 
+func writeFile(filename string, content string) error {
+
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := file.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+
+	err = os.Chmod(filename, 0600)
+	if err != nil {
+		return err
+	}
+
+	_, err = file.WriteString(content)
+	return err
+}
+
+func deleteFile(path string) error {
+	 err := os.Remove(path)
+	return err
+}

@@ -2,6 +2,7 @@ module github.com/signmykeyio/signmykey
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/asdine/storm v2.1.2+incompatible
 	github.com/dghubble/sling v1.1.0
 	github.com/fatih/color v1.7.0
 	github.com/go-chi/chi v4.0.0+incompatible
@@ -15,6 +16,7 @@ require (
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.0.0
+	github.com/mitchellh/gox v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.1.2 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
@@ -28,6 +30,7 @@ require (
 	github.com/spf13/pflag v1.0.1 // indirect
 	github.com/spf13/viper v1.0.2
 	github.com/stretchr/testify v1.3.0
+	go.etcd.io/bbolt v1.3.3 // indirect
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3 // indirect
 	golang.org/x/sys v0.0.0-20190403152447-81d4e9dc473e // indirect

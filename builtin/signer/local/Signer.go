@@ -144,3 +144,10 @@ func (s Signer) Sign(ctx context.Context, payload []byte, id string, principals 
 
 	return string(marshaledCertificate), nil
 }
+
+
+
+func (v Signer) RevokeCertificate(ctx context.Context, keyID string) error {
+return nil
+}
+

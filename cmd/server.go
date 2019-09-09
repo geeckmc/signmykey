@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	signmykeyAddons "github.com/signmykeyio/signmykey/builtin/addons"
 	"strings"
 
 	"github.com/signmykeyio/signmykey/api"
@@ -115,10 +116,18 @@ var serverCmd = &cobra.Command{
 			}
 		}
 
+		// fetch addons options configurations
+		addons := signmykeyAddons.Addons{}
+		err = addons.Init(viper.Sub("addons"))
+		if err != nil {
+			return err
+		}
+
 		config := api.Config{
 			Auth:   auth,
 			Princs: princs,
 			Signer: signer,
+			Addons: addons,
 
 			Addr:       viper.GetString("address"),
 			TLSDisable: viper.GetBool("tlsDisable"),

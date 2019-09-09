@@ -12,6 +12,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/pkg/errors"
 	"github.com/signmykeyio/signmykey/api"
+	signmykeyAddons "github.com/signmykeyio/signmykey/builtin/addons"
 	localAuth "github.com/signmykeyio/signmykey/builtin/authenticator/local"
 	localPrinc "github.com/signmykeyio/signmykey/builtin/principals/local"
 	localSign "github.com/signmykeyio/signmykey/builtin/signer/local"
@@ -80,10 +81,17 @@ users:
 			},
 		}
 
+		// fetch addons options configurations
+		addons := signmykeyAddons.Addons{
+			KeycloakHookAuthKey: "",
+		}
+		
+
 		config := api.Config{
 			Auth:   auth,
 			Princs: princs,
 			Signer: signer,
+			Addons: addons,
 
 			Addr:       "127.0.0.1:9600",
 			TLSDisable: true,

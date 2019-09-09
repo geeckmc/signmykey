@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/signmykeyio/signmykey/builtin/addons"
 	"github.com/signmykeyio/signmykey/builtin/authenticator"
 	"github.com/signmykeyio/signmykey/builtin/principals"
 	"github.com/signmykeyio/signmykey/builtin/signer"
@@ -25,6 +26,7 @@ type Config struct {
 	Auth   authenticator.Authenticator
 	Princs principals.Principals
 	Signer signer.Signer
+	Addons addons.Addons
 }
 
 var (
@@ -95,6 +97,7 @@ func Router() *chi.Mux {
 		r.Get("/ping", pingHandler)
 		r.Post("/sign", signHandler)
 		r.Get("/ca", caHandler)
+		r.Post("/webhooks/keycloack-admin-events", KeycloakEnventHandler)
 	})
 
 	return router

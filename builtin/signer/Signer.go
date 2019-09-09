@@ -11,6 +11,7 @@ type Signer interface {
 	Init(config *viper.Viper) error
 	Sign(ctx context.Context, payload []byte, id string, principals []string) (cert string, err error)
 	ReadCA() (string, error)
+	RevokeCertificate(context.Context, string) error
 }
 
 // CertReq represents certificate request
