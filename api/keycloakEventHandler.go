@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
-	"strconv"
 	"strings"
 
 	"github.com/go-chi/render"
@@ -49,9 +48,9 @@ func KeycloakEnventHandler(w http.ResponseWriter, r *http.Request) {
 
 	keycloakResponse := KeycloakResp{}
 
-	s, _ := strconv.Unquote(string(body))
+	cleanBody := strings.Replace(string(body), "\\", "", -1)
 
-	err = json.Unmarshal([]byte(s), &keycloakResponse)
+	err = json.Unmarshal( []byte(cleanBody), &keycloakResponse)
 
 	if err != nil {
 		log.Errorf("failed to parse keycloak payload: %s", err)
